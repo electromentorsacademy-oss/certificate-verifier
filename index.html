@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ElectroMentors Certificate Verification</title>
+<script src="https://cdn.jsdelivr.net/npm/jose@5.2.0/dist/browser/index.min.js"></script>
+<style>
+body{font-family:Arial,Helvetica,sans-serif;text-align:center;background:#f6f9fc;padding:40px;}
+.container{max-width:620px;margin:auto;background:#fff;border-radius:16px;padding:28px;box-shadow:0 4px 14px rgba(0,0,0,.08)}
+h2{color:#002855}
+.ok{color:#0a7a3d;font-weight:700}
+.err{color:#c1121f;font-weight:700}
+footer{margin-top:18px;color:#4b5563;font-size:.92rem}
+</style>
+</head>
+<body>
+<div class="container">
+  <h2>ElectroMentors Certificate Verification</h2>
+  <p id="status">Checking token…</p>
+  <div id="details"></div>
+  <footer>Support: <a href="mailto:support@electromentors.com">support@electromentors.com</a></footer>
+</div>
+
+<script>
+const JWK = {
+  kty:"EC", crv:"P-256",
+  x:"LOYLmCdjCGYEF-p92uSQB3JjRSScOmPihHwxo1mYuwY",
+  y:"88L9frWpvPQsvZpeNMRFxSLoscUKEcLL-BrRl1-dvQI",
+  kid:"em-key-2025-01"
+};
+
+function getToken(){
+  const p=new URLSearchParams(location.search);
+  const t=p.get("t");
+  return (t && t.startsWith("EM1:")) ? t : null;
+}
+
+async function verify(emToken){
+  try{
+    const token = emToken.slice(4); // drop EM1:
+    const key   = await jose.importJWK(JWK, "ES256");
+    const { payload } = await jose.jwtVerify(token, key);
+
+    document.getElementById("status").textContent = "✅ Verified certificate";
+    document.getElementById("status").className = "ok";
+    document.getElementById("details").innerHTML = `
+      <p><b>Name:</b> ${payload.name}</p>
+      <p><b>Course:</b> ${payload.course}</p>
+      <p><b>Issued:</b> ${payload.issued}</p>
+      <p><b>Expires:</b> ${payload.expires || "—"}</p>
+      <p><b>Code:</b> ${payload.code}</p>
+      <p><b>Certificate ID:</b> ${payload.cid}</p>`;
+  }catch(e){
+    document.getElementById("status").textContent = "❌ Invalid or missing token";
+    document.getElementById("status").className = "err";
+    document.getElementById("details").innerHTML = "";
+    console.error(e);
+  }
+}
+
+const t = getToken();
+if (t) verify(t); else {
+  document.getElementById("status").textContent = "❌ Missing token (?t=EM1:...)";
+  document.getElementById("status").className = "err";
+}
+</script>
+</body>
+</html>
